@@ -12,15 +12,15 @@
 
 template<typename T>
 class GraphAlgorithm {
-    uint64_t v, e, last;
-    uint64_t *dist;
+    long v, e, last;
+    long *dist;
     bool *used;
     T *graph;
 
 public:
-    GraphAlgorithm(uint64_t v, uint64_t e) : v(v), e(e) {
+    GraphAlgorithm(long v, long e) : v(v), e(e) {
         used = new bool[v + 2];
-        dist = new uint64_t[v + 2];
+        dist = new long[v + 2];
         graph = new T(v, e);
     }
 
@@ -31,46 +31,46 @@ public:
     }
 
     // required
-    void populate(std::tuple<uint64_t, uint64_t, double>* edges) {
+    void populate(triple *edges) {
         graph->populate(edges);
     }
-    
+
     // required
     void finished() {
         graph->finished();
     }
 
-    // optional
-    void sortEdgesByNodeId() {
-        graph->sortEdgesByNodeId();
-    }
-
-    // optional
-    void add_edges(uint64_t from, std::vector<uint64_t> &to, std::vector<double> &weights) {
-        graph->add_edges(from, to, weights);
-    }
-
-    // optional
-    void add_edge(uint64_t from, uint64_t to, double weight) {
-        graph->add_edge(from, to, weight);
-    }
+//    // optional
+//    void sortEdgesByNodeId() {
+//        graph->sortEdgesByNodeId();
+//    }
+//
+//    // optional
+//    void add_edges(long from, std::vector<long> &to, std::vector<double> &weights) {
+//        graph->add_edges(from, to, weights);
+//    }
+//
+//    // optional
+//    void add_edge(long from, long to, double weight) {
+//        graph->add_edge(from, to, weight);
+//    }
 
     void write_results(std::string filename) {
         std::ofstream outfile(filename);
-        for (uint64_t i = 0; i <= v; i++){
-            outfile << i << " " << dist[i] << std::endl; 
+        for (long i = 0; i <= v; i++){
+            outfile << i << " " << dist[i] << std::endl;
         }
     }
 
-    // the bfs populate diff with the corresponding 
+    // the bfs populate diff with the corresponding
     // layer of the BFS tree for each vertex
-    double bfs(uint64_t cur_vertex) {
+    double bfs(long cur_vertex) {
         // initialization
         memset(used, 0, sizeof(bool) * (v + 2));
-        for (uint64_t i = 0; i < v + 2; i++)
-            dist[i] = LONG_MAX; 
+        for (long i = 0; i < v + 2; i++)
+            dist[i] = LONG_MAX;
         double sum = 0;
-        std::queue<uint64_t> q;
+        std::queue<long> q;
         q.push(cur_vertex);
         used[cur_vertex] = true;
         dist[cur_vertex] = 0;
@@ -91,9 +91,9 @@ public:
         return sum;
     }
 
-    // the dfs populate diff with the visiting 
+    // the dfs populate diff with the visiting
     // order for each vertex
-    double dfs_recursion(uint64_t cur_vertex) {
+    double dfs_recursion(long cur_vertex) {
         double sum = 0;
         used[cur_vertex] = true;
         for (auto& to : graph->get_neighbors(cur_vertex)) {
@@ -106,10 +106,10 @@ public:
         return sum;
     }
 
-    double dfs(uint64_t cur_vertex) {
+    double dfs(long cur_vertex) {
         // initialization
         memset(used, 0, sizeof(bool) * (v + 2));
-        for (uint64_t i = 0; i < v + 2; i++)
+        for (long i = 0; i < v + 2; i++)
             dist[i] = LONG_MAX;
         dist[cur_vertex] = 0;
         last = 0;

@@ -4,18 +4,21 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream> 
+#include <sstream>
 #include <vector>
 #include <set>
 #include <chrono>
 #include <algorithm>
 #include <functional>
 #include <unistd.h>
+#include <map>
+#include "triple.h"
+
 
 // count non empty lines in a file
-uint64_t count_lines(std::string filename){
+inline long count_lines(std::string filename){
     std::ifstream inFile(filename);
-    uint64_t numLines = 0;
+    long numLines = 0;
     std::string line;
     while (std::getline(inFile, line)) {
         if (!line.empty())
@@ -25,7 +28,7 @@ uint64_t count_lines(std::string filename){
 }
 
 // split a string in a vector of strings, given a separator char
-std::vector<std::string> split(const std::string &s, char delim){
+inline std::vector<std::string> split(const std::string &s, char delim){
     std::vector<std::string> result;
     std::stringstream ss(s);
     std::string item;
@@ -36,11 +39,13 @@ std::vector<std::string> split(const std::string &s, char delim){
 }
 
 // load the graph
-std::set<uint64_t> load_graph(std::string filename, bool undirected, std::tuple<uint64_t, uint64_t, double>* edges, uint64_t e){
+inline std::set<long> load_graph(std::string filename, bool undirected, triple *edges, long e){
     std::ifstream eFile(filename+".e");
     std::string line;
-    std::vector<std::string> tmp;    
-    std::set<uint64_t> nodes;
+    std::vector<std::string> tmp;
+    std::set<long> nodes;
+    std::vector<triple> e_tmp;
+
 
     while (std::getline(eFile, line)){
         if (!line.empty()){
@@ -54,37 +59,63 @@ std::set<uint64_t> load_graph(std::string filename, bool undirected, std::tuple<
     if (tmp.size() == 3)
         weighted = true;
 
-    uint64_t i = 0;
+    long i = 0;
+
+    triple edge;
 
     // TODO make it faster
     while (std::getline(eFile, line)){
         if (!line.empty()){
             tmp = split(line, ' ');
-            edges[i] = std::make_tuple(std::stoul(tmp[0]), std::stoul(tmp[1]), (weighted)?std::stof(tmp[2]):1);
-            if (undirected) 
-                edges[e/2+i] = std::make_tuple(std::stoul(tmp[1]), std::stoul(tmp[0]), (weighted)?std::stof(tmp[2]):1);
-            nodes.insert(std::stoul(tmp[0]));
-            nodes.insert(std::stoul(tmp[1]));
+
+            edge.x = std::stol(tmp[0]);
+            edge.y = std::stol(tmp[1]);
+            edge.val = (weighted)?std::stof(tmp[2]):1;
+
+            e_tmp.push_back(edge);
+
+            if (undirected){
+                edge.x = std::stol(tmp[1]);
+                edge.y = std::stol(tmp[0]);
+                edge.val = (weighted)?std::stof(tmp[2]):1;
+
+                e_tmp.push_back(edge);
+            }
+            nodes.insert(std::stol(tmp[0]));
+            nodes.insert(std::stol(tmp[1]));
             i++;
         }
     }
+
+    std::sort(e_tmp.begin(), e_tmp.end());
+
+    for (long j = 0; j < e; ++j) {
+        edges[j]=e_tmp[j];
+    }
+
+    // for loop that manage the node "jump"
+    //long max_idx = *nodes.rbegin();
+    //for(long j = 0; j < max_idx; j++) 
+    //    nodes.insert(j); 
+
+
     return nodes;
 }
 
-void print_graph_info(uint64_t v, uint64_t e, bool undirected){
+inline void print_graph_info(long v, long e, bool undirected){
     std::string prop = (undirected) ? "Undirected" : "Directed";
     std::cout << prop << " graph" << std::endl;
     std::cout << "num nodes: " << v << std::endl;
     std::cout << "num directed edges: " << e << std::endl << std::endl;
 }
 
-void print_edge_list(std::tuple<uint64_t, uint64_t, double>* edges, uint64_t e){
-    for(uint64_t j = 0; j < e; j++)
+inline void print_edge_list(std::tuple<long, long, double>* edges, long e){
+    for(long j = 0; j < e; j++)
         std::cout << std::get<0>(edges[j]) << " " << std::get<1>(edges[j]) << " " << std::get<2>(edges[j]) << std::endl;
     std::cout << std::endl;
 }
 
-void process_mem_usage(double& vm_usage, double& resident_set, bool diff)
+inline void process_mem_usage(double& vm_usage, double& resident_set, bool diff)
 {
     std::ifstream stat_stream("/proc/self/stat",std::ios_base::in);
 
@@ -104,7 +135,7 @@ void process_mem_usage(double& vm_usage, double& resident_set, bool diff)
     stat_stream.close();
 
     long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
-    
+
     if(!diff){
         vm_usage = vsize / 1024.0;
         resident_set = rss * page_size_kb;

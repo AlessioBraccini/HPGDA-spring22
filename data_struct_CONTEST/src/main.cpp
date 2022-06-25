@@ -4,6 +4,8 @@
 #include <fstream>
 #include <ostream>
 #include <string>
+#include "../include/triple.h"
+#include "../include/CSR.h"
 
 
 int main(int argc, char **argv) {
@@ -22,31 +24,31 @@ int main(int argc, char **argv) {
     std::string graphName = argv[1];
 
     // get source vertex from command arguments
-    uint64_t src_vertex, num_iterations;
+    long src_vertex, num_iterations;
     if (argc <= 3){
-        std::cout << "ERROR: missing required arguments!" << std::endl; 
-        std::cout << "USAGE: bin/exe path/to/graph num_iterations\nOptions:\n\t-U\tfor undirected graphs\n\t-d\tfor debugging" << std::endl; 
+        std::cout << "ERROR: missing required arguments!" << std::endl;
+        std::cout << "USAGE: bin/exe path/to/graph num_iterations\nOptions:\n\t-U\tfor undirected graphs\n\t-d\tfor debugging" << std::endl;
         return 1;
     } else {
-        src_vertex = std::stoul(std::string(argv[2]));
-        num_iterations = std::stoul(std::string(argv[3]));
+        src_vertex = std::stol(std::string(argv[2]));
+        num_iterations = std::stol(std::string(argv[3]));
     }
-    
+
     // default: directed graph
     // default: debugging inactive
     bool undirected = false;
     bool debug = false;
     if (argc > 4){
-        undirected = (std::string(argv[4]) == "-U") ? true : false; 
-        debug = (std::string(argv[4]) == "-d") ? true : false; 
+        undirected = (std::string(argv[4]) == "-U") ? true : false;
+        debug = (std::string(argv[4]) == "-d") ? true : false;
         if (argc > 5){
             if (!undirected) undirected = (std::string(argv[5]) == "-U") ? true : false;
             if (!debug) debug = (std::string(argv[5]) == "-d") ? true : false;
-        } 
+        }
     }
 
     // get number of edges
-    uint64_t e = count_lines(graphName + ".e");
+    long e = count_lines(graphName + ".e");
     // no self-loop allowed: each undirected edge = 2 directed edges
     if (undirected) e *= 2;
 
@@ -54,8 +56,8 @@ int main(int argc, char **argv) {
     process_mem_usage(vm_usage, resident_set_size, false);
 
     // temporary data structs for nodes and edges
-    std::tuple<uint64_t, uint64_t, double>* edges = new std::tuple<uint64_t, uint64_t, double>[e];
-    std::set<uint64_t> nodes;
+    auto* edges = new triple[e];
+    std::set<long> nodes;
 
     // read nodes and edges
     if(debug) std::cout << "Loading the graph " << graphName << std::endl;
@@ -67,8 +69,8 @@ int main(int argc, char **argv) {
     if(debug) std::cout << "Edge list size: " << resident_set_size/1024 << " MB" << std::endl << std::endl;
 
     // get number of nodes
-    uint64_t v = nodes.size();
-    
+    long v = count_lines(graphName + ".v");
+
     // print graph info
     if(debug) print_graph_info(v, e, undirected);
 
@@ -77,23 +79,23 @@ int main(int argc, char **argv) {
 
     // get memory usage before instantiating and populating the graph
     process_mem_usage(vm_usage, resident_set_size, false);
-    
-    for(uint64_t i = 0; i < num_iterations; i++){
+
+    for(long i = 0; i < num_iterations; i++){
 
         if(debug) std::cout << "Iteration " << i+1 << std::endl << std::endl;
         // instantiate the graph
-        auto *graph = new GraphAlgorithm<AdjacencyList>(v,e);
-        
+        auto *graph = new GraphAlgorithm<CSR>(v,e);
+
         // populate the graph and measure time
         auto begin_populate = std::chrono::high_resolution_clock::now();
         graph->populate(edges);
         auto end_populate = std::chrono::high_resolution_clock::now();
         auto elapsed_populate = std::chrono::duration_cast<std::chrono::milliseconds>(end_populate - begin_populate);
-        if(debug) 
+        if(debug)
             std::cout << "Graph population time: " << elapsed_populate.count() << " ms" << std::endl << std::endl;
-        else 
+        else
             std::cout << src_vertex << "," << elapsed_populate.count() << ",";
-        
+
         //  get increment in memory usage after instantiating and populating the graph
         vm_tmp = vm_usage;
         rss_tmp = resident_set_size;
@@ -104,7 +106,7 @@ int main(int argc, char **argv) {
             std::cout << rss_tmp/1024 << ",";
 
         double result = -1;
-        
+
         // execute bfs and measure time
         auto begin_bfs = std::chrono::high_resolution_clock::now();
         result = graph->bfs(src_vertex);
@@ -149,7 +151,6 @@ int main(int argc, char **argv) {
 
     // free memory
     delete[] edges;
-    
+
     return 0;
 }
-
